@@ -62,7 +62,10 @@ class DFRobotDFPlayerMini {
     void sendStack();
     void sendStack(uint8_t command);
     void sendStack(uint8_t command, uint16_t argument);
-    void sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow);
+    
+    void sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow){
+    	sendStack(command, argumentHigh<<8 | argumentLow);//gcc knows how to inline this code, saving bytes
+    }
 
     void enableACK();
     void disableACK();

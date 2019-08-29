@@ -68,9 +68,7 @@ void DFRobotDFPlayerMini::sendStack(uint8_t command, uint16_t argument){
 }
 
 void DFRobotDFPlayerMini::sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow){
-  uint16_t buffer = argumentHigh;
-  buffer <<= 8;
-  sendStack(command, buffer | argumentLow);
+  sendStack(command, argumentHigh<<8 | argumentLow);
 }
 
 void DFRobotDFPlayerMini::enableACK(){
