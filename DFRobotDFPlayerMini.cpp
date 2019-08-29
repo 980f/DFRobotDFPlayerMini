@@ -47,7 +47,7 @@ void DFRobotDFPlayerMini::sendStack(){
   }
   Serial.println();
 #endif
-  _serial->write(_sending, DFPLAYER_SEND_LENGTH);
+  _serial->write(_sending, Stack::Allocation);
   _timeOutTimer = millis();
   _isSending = _sending[Stack::ACK];
   
@@ -118,7 +118,7 @@ bool DFRobotDFPlayerMini::begin(Stream &stream, bool isACK, bool doReset){
   return (readType() == Event::CardOnline) || (readType() == Event::USBOnline) || !isACK;
 }
 
-uint8_t DFRobotDFPlayerMini::readType(){
+Event DFRobotDFPlayerMini::readType(){
   _isAvailable = false;
   return _handleType;
 }
@@ -128,7 +128,7 @@ uint16_t DFRobotDFPlayerMini::read(){
   return _handleParameter;
 }
 
-bool DFRobotDFPlayerMini::handleMessage(uint8_t type, uint16_t parameter){
+bool DFRobotDFPlayerMini::handleMessage(Event type, uint16_t parameter){
   _receivedIndex = 0;
   _handleType = type;
   _handleParameter = parameter;
@@ -136,7 +136,7 @@ bool DFRobotDFPlayerMini::handleMessage(uint8_t type, uint16_t parameter){
   return _isAvailable;
 }
 
-bool DFRobotDFPlayerMini::handleError(uint8_t type, uint16_t parameter){
+bool DFRobotDFPlayerMini::handleError(Event type, uint16_t parameter){
   handleMessage(type, parameter);
   _isSending = false;
   return false;

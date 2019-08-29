@@ -17,39 +17,33 @@
 #define DFRobotDFPlayerMini_cpp
 
 
-enum DFPLAYER_EQ {
+enum DFPLAYER_EQ : uint8_t {
   NORMAL = 0,
   POP, ROCK, JAZZ, CLASSIC, BASS
 };
 
-enum DFPLAYER_DEVICE {
+enum DFPLAYER_DEVICE : uint8_t {
   U_DISK = 1,
   SD, AUX, SLEEP, FLASH
 };
 
-#define DFPLAYER_RECEIVED_LENGTH 10
-#define DFPLAYER_SEND_LENGTH 10
-
-
 //#define _DEBUG
 
 enum Event : uint8_t {
-TimeOut,WrongStack,CardInserted,CardRemoved ,CardOnline ,PlayFinished,Error,USBInserted ,USBRemoved,USBOnline,CardUSBOnline,FeedBack 
+  TimeOut=0, WrongStack, CardInserted, CardRemoved , CardOnline , PlayFinished, Error, USBInserted , USBRemoved, USBOnline, CardUSBOnline, FeedBack
 };
 
-#define Busy 1
-#define Sleeping 2
-#define SerialWrongStack 3
-#define CheckSumNotMatch 4
-#define FileIndexOut 5
-#define FileMismatch 6
-#define Advertise 7
+enum Issue : uint8_t {
+  Busy = 1, Sleeping , SerialWrongStack , CheckSumNotMatch , FileIndexOut , FileMismatch , Advertise 
+};
 
+/** named indexes into message. Messages are curiously referred to as a stack.*/
 enum Stack {
   Header = 0,
   Version, Length , Command , ACK,
   Parameter, ParameterLow,
-  CheckSum, CheckSumLow, End
+  CheckSum, CheckSumLow, End,
+  Allocation  //DFPLAYER_RECEIVED_LENGTH  DFPLAYER_SEND_LENGTH
 };
 
 using Tick = decltype(millis());
@@ -60,8 +54,8 @@ class DFRobotDFPlayerMini {
     Tick _timeOutTimer;
     Tick _timeOutDuration = 500;
 
-    uint8_t _received[DFPLAYER_RECEIVED_LENGTH];
-    uint8_t _sending[DFPLAYER_SEND_LENGTH] = {0x7E, 0xFF, 06, 00, 01, 00, 00, 00, 00, 0xEF};
+    uint8_t _received[Stack::Allocation];
+    uint8_t _sending[Stack::Allocation] = {0x7E, 0xFF, 06, 00, 01, 00, 00, 00, 00, 0xEF};
 
     uint8_t _receivedIndex = 0;
 
@@ -79,8 +73,6 @@ class DFRobotDFPlayerMini {
 
     uint16_t calculateCheckSum(uint8_t *buffer);
 
-
-
     void parseStack();
     bool validateStack();
 
@@ -88,14 +80,14 @@ class DFRobotDFPlayerMini {
 
   public:
 
-    uint8_t _handleType;
+    Event _handleType;
     uint8_t _handleCommand;
     uint16_t _handleParameter;
     bool _isAvailable = false;
     bool _isSending = false;
 
-    bool handleMessage(uint8_t type, uint16_t parameter = 0);
-    bool handleError(uint8_t type, uint16_t parameter = 0);
+    bool handleMessage(Event type, uint16_t parameter = 0);
+    bool handleError(Event type, uint16_t parameter = 0);
 
     uint8_t readCommand();
 
@@ -105,7 +97,7 @@ class DFRobotDFPlayerMini {
 
     bool available();
 
-    uint8_t readType();
+    Event readType();
 
     uint16_t read();
 
