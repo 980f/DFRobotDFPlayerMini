@@ -139,6 +139,10 @@ class DFRobotDFPlayerMini {
 
     void setTimeOut(unsigned long timeOutDuration);
 
+/** you are on your own for the most part.
+@returns delay before you should send another command */
+    Tick sendCommand(uint8_t ccode, uint16_t param=0);
+
     void next();
 
     void previous();
@@ -149,13 +153,14 @@ class DFRobotDFPlayerMini {
 
     void volumeDown();
 
-    void volume(uint8_t volume);
+    void volume(uint8_t volume);//1..31
 
     void EQ(DFPLAYER_EQ eq);
 
     void loop(LoopMode play);
 
-    void outputDevice(DFPLAYER_DEVICE device);
+		/** @returns number of millis you shoud wait before trying to play a track. */
+    unsigned outputDevice(DFPLAYER_DEVICE device);
 
     void sleep();
 

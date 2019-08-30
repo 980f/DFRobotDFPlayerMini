@@ -41,7 +41,7 @@ void DFRobotDFPlayerMini::sendStack() {
 #ifdef DF_DEBUG
   DF_DEBUG.println();
   DF_DEBUG.print(F("sending:"));
-  for (int i = 0; i < DFPLAYER_SEND_LENGTH; i++) {
+  for (int i = 0; i < Stack::Allocation; i++) {
     DF_DEBUG.print(_sending[i], HEX);
     DF_DEBUG.print(F(" "));
   }
@@ -65,6 +65,39 @@ void DFRobotDFPlayerMini::sendStack(uint8_t command, uint16_t argument) {
   uint16ToArray(argument, _sending + Stack::Parameter);
   uint16ToArray(calculateCheckSum(_sending), _sending + Stack::CheckSum);
   sendStack();
+}
+
+Tick DFRobotDFPlayerMini::sendCommand(uint8_t ccode, uint16_t param=0){
+  if (_sending[Stack::ACK]) {  //if the ack mode is on wait until the last transmition
+    while (_isSending) {
+      return Tick(~0);
+    }
+  }
+	 _sending[Stack::Command] = ccode;
+  uint16ToArray(param, &_sending[Stack::Parameter]);
+  uint16ToArray(calculateCheckSum(_sending), &_sending[Stack::CheckSum]);
+
+
+#ifdef DF_DEBUG
+  DF_DEBUG.println();
+  DF_DEBUG.print(F("sending:"));
+  for (int i = 0; i < Stack::Allocation; i++) {
+    DF_DEBUG.print(_sending[i], HEX);
+    DF_DEBUG.print(F(" "));
+  }
+  DF_DEBUG.println();
+#endif
+  _serial->write(_sending, Stack::Allocation);
+  _timeOutTimer = millis();
+  _isSending = _sending[Stack::ACK];
+  
+	if(ccode==0x09){
+		return 200;
+	} if (!_sending[Stack::ACK]) { //if the ack mode is off wait 10 ms after one transmission.
+    return 10;
+  } else {
+  	return 0;
+  }
 }
 
 void DFRobotDFPlayerMini::enableACK() {
@@ -308,11 +341,14 @@ void DFRobotDFPlayerMini::loop(LoopMode play) {
   sendStack(0x08, play);
 }
 
-void DFRobotDFPlayerMini::outputDevice(DFPLAYER_DEVICE device) {
+unsigned DFRobotDFPlayerMini::outputDevice(DFPLAYER_DEVICE device) {
   if (this->device != device) {
     this->device = device;
     sendStack(0x09, device);
-    delay(200);
+//    delay(200);
+    return 200;
+  } else {
+  	return 0;
   }
 }
 
