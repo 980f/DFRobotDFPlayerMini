@@ -9,6 +9,15 @@
    @author [Angelo](Angelo.qiao@dfrobot.com)
    @version  V1.0.3
    @date  2016-12-07
+
+  980f comments:
+  'stack' is used for the communications packet, the thing that gets passed through a network stack.
+  I replaced #defines with enums, and then reworked function calls to use the enum's rather than any old byte.
+    Many of the enumerated values are never used.
+  I replaced *( buffer + offset) with buffer[offset].
+  I used the formal means of getting the correct type for use with millisecond timer.
+  I replaced delay(0) with a #define of YIELD to make it easier to search for these when I switch this to event driven rather than co-process. I have ESP8266's in hand.
+
 */
 
 #include "Arduino.h"
@@ -30,11 +39,11 @@ enum DFPLAYER_DEVICE : uint8_t {
 //#define _DEBUG
 
 enum Event : uint8_t {
-  TimeOut=0, WrongStack, CardInserted, CardRemoved , CardOnline , PlayFinished, Error, USBInserted , USBRemoved, USBOnline, CardUSBOnline, FeedBack
+  TimeOut = 0, WrongStack, CardInserted, CardRemoved , CardOnline , PlayFinished, Error, USBInserted , USBRemoved, USBOnline, CardUSBOnline, FeedBack
 };
 
 enum Issue : uint8_t {
-  Busy = 1, Sleeping , SerialWrongStack , CheckSumNotMatch , FileIndexOut , FileMismatch , Advertise 
+  Busy = 1, Sleeping , SerialWrongStack , CheckSumNotMatch , FileIndexOut , FileMismatch , Advertise
 };
 
 /** named indexes into message. Messages are curiously referred to as a stack.*/
@@ -62,9 +71,9 @@ class DFRobotDFPlayerMini {
     void sendStack();
     void sendStack(uint8_t command);
     void sendStack(uint8_t command, uint16_t argument);
-    
-    void sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow){
-    	sendStack(command, argumentHigh<<8 | argumentLow);//gcc knows how to inline this code, saving bytes
+
+    void sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow) {
+      sendStack(command, argumentHigh << 8 | argumentLow); //gcc knows how to inline this code, saving bytes
     }
 
     void enableACK();
@@ -84,16 +93,19 @@ class DFRobotDFPlayerMini {
   public:
 
     Event _handleType;
+    /** unenumerated command codes, refer to manual*/
     uint8_t _handleCommand;
     uint16_t _handleParameter;
+
     bool _isAvailable = false;
+
     bool _isSending = false;
 
     bool handleMessage(Event type, uint16_t parameter = 0);
     bool handleError(Event type, uint16_t parameter = 0);
 
     uint8_t readCommand();
-
+    /** setup call */
     bool begin(Stream& stream, bool isACK = true, bool doReset = true);
 
     bool waitAvailable(unsigned long duration = 0);

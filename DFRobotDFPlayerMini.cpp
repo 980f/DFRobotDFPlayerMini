@@ -13,6 +13,9 @@
 
 #include "DFRobotDFPlayerMini.h"
 
+//eps8266 yield is different, let us mark yields separately from 'wait a fraction of a millisecond'
+#define YIELD delay(0)
+
 void DFRobotDFPlayerMini::setTimeOut(unsigned long timeOutDuration){
   _timeOutDuration = timeOutDuration;
 }
@@ -33,7 +36,7 @@ uint16_t DFRobotDFPlayerMini::calculateCheckSum(uint8_t *buffer){
 void DFRobotDFPlayerMini::sendStack(){
   if (_sending[Stack::ACK]) {  //if the ack mode is on wait until the last transmition
     while (_isSending) {
-      delay(0);
+      YIELD;
       available();
     }
   }
@@ -67,10 +70,6 @@ void DFRobotDFPlayerMini::sendStack(uint8_t command, uint16_t argument){
   sendStack();
 }
 
-void DFRobotDFPlayerMini::sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow){
-  sendStack(command, argumentHigh<<8 | argumentLow);
-}
-
 void DFRobotDFPlayerMini::enableACK(){
   _sending[Stack::ACK] = 0x01;
 }
@@ -88,7 +87,7 @@ bool DFRobotDFPlayerMini::waitAvailable(Tick duration){
     if (millis() - timer > duration) {
       return false;
     }
-    delay(0);
+    YIELD;
   }
   return true;
 }
@@ -146,14 +145,14 @@ uint8_t DFRobotDFPlayerMini::readCommand(){
 }
 
 void DFRobotDFPlayerMini::parseStack(){
-  uint8_t handleCommand = *(_received + Stack::Command);
-  if (handleCommand == 0x41) { //handle the 0x41 ack feedback as a spcecial case, in case the pollusion of _handleCommand, _handleParameter, and _handleType.
+  uint8_t handleCommand = _received[Stack::Command];
+  if (handleCommand == 0x41) { //handle the 0x41 ack feedback as a special case, in case the corruption of _handleCommand, _handleParameter, and _handleType.
     _isSending = false;
     return;
   }
   
   _handleCommand = handleCommand;
-  _handleParameter =  arrayToUint16(_received + Stack::Parameter);
+  _handleParameter =  arrayToUint16(&_received[Stack::Parameter]);
 
   switch (_handleCommand) {
     case 0x3D:
@@ -213,19 +212,19 @@ void DFRobotDFPlayerMini::parseStack(){
 }
 
 uint16_t DFRobotDFPlayerMini::arrayToUint16(uint8_t *array){
-  uint16_t value = *array;
+  uint16_t value = *array++;
   value <<=8;
-  value += *(array+1);
+  value |= *array;
   return value;
 }
 
 bool DFRobotDFPlayerMini::validateStack(){
-  return calculateCheckSum(_received) == arrayToUint16(_received+Stack::CheckSum);
+  return calculateCheckSum(_received) == arrayToUint16(&_received[Stack::CheckSum]);
 }
 
 bool DFRobotDFPlayerMini::available(){
   while (_serial->available()) {
-    delay(0);
+    YIELD;
     if (_receivedIndex == 0) {
       _received[Stack::Header] = _serial->read();
 #ifdef _DEBUG
