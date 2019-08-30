@@ -13,6 +13,8 @@
 
 #include "DFRobotDFPlayerMini.h"
 
+#define DF_DEBUG Serial
+
 //eps8266 yield is different, let us mark yields separately from 'wait a fraction of a millisecond'
 #define YIELD delay(0)
 
@@ -22,7 +24,7 @@ void DFRobotDFPlayerMini::setTimeOut(unsigned long timeOutDuration) {
 
 uint16_t DFRobotDFPlayerMini::calculateCheckSum(uint8_t *buffer) {
   uint16_t sum = 0;
-  for (int i = Stack::Version; i < Stack::CheckSum; i++) {
+  for (int i = Stack::Version; i < Stack::CheckSum; i++) {//this line implies that the packet format is fully fixed, 0's are sent when no param is specified.
     sum += buffer[i];
   }
   return -sum;
@@ -36,14 +38,14 @@ void DFRobotDFPlayerMini::sendStack() {
     }
   }
 
-#ifdef _DEBUG
-  Serial.println();
-  Serial.print(F("sending:"));
+#ifdef DF_DEBUG
+  DF_DEBUG.println();
+  DF_DEBUG.print(F("sending:"));
   for (int i = 0; i < DFPLAYER_SEND_LENGTH; i++) {
-    Serial.print(_sending[i], HEX);
-    Serial.print(F(" "));
+    DF_DEBUG.print(_sending[i], HEX);
+    DF_DEBUG.print(F(" "));
   }
-  Serial.println();
+  DF_DEBUG.println();
 #endif
   _serial->write(_sending, Stack::Allocation);
   _timeOutTimer = millis();
@@ -216,10 +218,10 @@ bool DFRobotDFPlayerMini::available() {
     YIELD;
     if (_receivedIndex == 0) {
       _received[Stack::Header] = _serial->read();
-#ifdef _DEBUG
-      Serial.print(F("received:"));
-      Serial.print(_received[_receivedIndex], HEX);
-      Serial.print(F(" "));
+#ifdef DF_DEBUG
+      DF_DEBUG.print(F("received:"));
+      DF_DEBUG.print(_received[_receivedIndex], HEX);
+      DF_DEBUG.print(F(" "));
 #endif
       if (_received[Stack::Header] == 0x7E) {
         _receivedIndex ++;
@@ -227,9 +229,9 @@ bool DFRobotDFPlayerMini::available() {
     }
     else {
       _received[_receivedIndex] = _serial->read();
-#ifdef _DEBUG
-      Serial.print(_received[_receivedIndex], HEX);
-      Serial.print(F(" "));
+#ifdef DF_DEBUG
+      DF_DEBUG.print(_received[_receivedIndex], HEX);
+      DF_DEBUG.print(F(" "));
 #endif
       switch (_receivedIndex) {
         case Stack::Version:
@@ -243,8 +245,8 @@ bool DFRobotDFPlayerMini::available() {
           }
           break;
         case Stack::End:
-#ifdef _DEBUG
-          Serial.println();
+#ifdef DF_DEBUG
+          DF_DEBUG.println();
 #endif
           if (_received[_receivedIndex] != 0xEF) {
             return handleError(WrongStack);

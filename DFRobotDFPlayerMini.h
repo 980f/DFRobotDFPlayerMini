@@ -48,8 +48,6 @@ enum DFPLAYER_DEVICE : uint8_t {
   AUX,
   SLEEP,
   FLASH,
-  
-  
 };
 
 enum Event : uint8_t {
