@@ -1,39 +1,34 @@
 /*!
- * @file DFRobotDFPlayerMini.cpp
- * @brief DFPlayer - An Arduino Mini MP3 Player From DFRobot
- * @n Header file for DFRobot's DFPlayer
- *
- * @copyright	[DFRobot]( http://www.dfrobot.com ), 2016
- * @copyright	GNU Lesser General Public License
- *
- * @author [Angelo](Angelo.qiao@dfrobot.com)
- * @version  V1.0.3
- * @date  2016-12-07
- */
+   @file DFRobotDFPlayerMini.cpp
+   @brief DFPlayer - An Arduino Mini MP3 Player From DFRobot
+   @n Header file for DFRobot's DFPlayer
+
+   @copyright	[DFRobot]( http://www.dfrobot.com ), 2016
+   @copyright	GNU Lesser General Public License
+
+   @author [Angelo](Angelo.qiao@dfrobot.com)
+   @version  V1.0.3
+   @date  2016-12-07
+*/
 
 #include "DFRobotDFPlayerMini.h"
 
 //eps8266 yield is different, let us mark yields separately from 'wait a fraction of a millisecond'
 #define YIELD delay(0)
 
-void DFRobotDFPlayerMini::setTimeOut(unsigned long timeOutDuration){
+void DFRobotDFPlayerMini::setTimeOut(unsigned long timeOutDuration) {
   _timeOutDuration = timeOutDuration;
 }
 
-void DFRobotDFPlayerMini::uint16ToArray(uint16_t value, uint8_t *array){
-  *array = (uint8_t)(value>>8);
-  *(array+1) = (uint8_t)(value);
-}
-
-uint16_t DFRobotDFPlayerMini::calculateCheckSum(uint8_t *buffer){
+uint16_t DFRobotDFPlayerMini::calculateCheckSum(uint8_t *buffer) {
   uint16_t sum = 0;
-  for (int i=Stack::Version; i<Stack::CheckSum; i++) {
+  for (int i = Stack::Version; i < Stack::CheckSum; i++) {
     sum += buffer[i];
   }
   return -sum;
 }
 
-void DFRobotDFPlayerMini::sendStack(){
+void DFRobotDFPlayerMini::sendStack() {
   if (_sending[Stack::ACK]) {  //if the ack mode is on wait until the last transmition
     while (_isSending) {
       YIELD;
@@ -44,8 +39,8 @@ void DFRobotDFPlayerMini::sendStack(){
 #ifdef _DEBUG
   Serial.println();
   Serial.print(F("sending:"));
-  for (int i=0; i<DFPLAYER_SEND_LENGTH; i++) {
-    Serial.print(_sending[i],HEX);
+  for (int i = 0; i < DFPLAYER_SEND_LENGTH; i++) {
+    Serial.print(_sending[i], HEX);
     Serial.print(F(" "));
   }
   Serial.println();
@@ -53,37 +48,37 @@ void DFRobotDFPlayerMini::sendStack(){
   _serial->write(_sending, Stack::Allocation);
   _timeOutTimer = millis();
   _isSending = _sending[Stack::ACK];
-  
-  if (!_sending[Stack::ACK]) { //if the ack mode is off wait 10 ms after one transmition.
+
+  if (!_sending[Stack::ACK]) { //if the ack mode is off wait 10 ms after one transmission.
     delay(10);
   }
 }
 
-void DFRobotDFPlayerMini::sendStack(uint8_t command){
+void DFRobotDFPlayerMini::sendStack(uint8_t command) {
   sendStack(command, 0);
 }
 
-void DFRobotDFPlayerMini::sendStack(uint8_t command, uint16_t argument){
+void DFRobotDFPlayerMini::sendStack(uint8_t command, uint16_t argument) {
   _sending[Stack::Command] = command;
-  uint16ToArray(argument, _sending+Stack::Parameter);
-  uint16ToArray(calculateCheckSum(_sending), _sending+Stack::CheckSum);
+  uint16ToArray(argument, _sending + Stack::Parameter);
+  uint16ToArray(calculateCheckSum(_sending), _sending + Stack::CheckSum);
   sendStack();
 }
 
-void DFRobotDFPlayerMini::enableACK(){
+void DFRobotDFPlayerMini::enableACK() {
   _sending[Stack::ACK] = 0x01;
 }
 
-void DFRobotDFPlayerMini::disableACK(){
+void DFRobotDFPlayerMini::disableACK() {
   _sending[Stack::ACK] = 0x00;
 }
 
-bool DFRobotDFPlayerMini::waitAvailable(Tick duration){
+bool DFRobotDFPlayerMini::waitAvailable(Tick duration) {
   Tick timer = millis();
   if (!duration) {
     duration = _timeOutDuration;
   }
-  while (!available()){
+  while (!available()) {
     if (millis() - timer > duration) {
       return false;
     }
@@ -92,19 +87,20 @@ bool DFRobotDFPlayerMini::waitAvailable(Tick duration){
   return true;
 }
 
-bool DFRobotDFPlayerMini::begin(Stream &stream, bool isACK, bool doReset){
+bool DFRobotDFPlayerMini::begin(Stream &stream, bool requestACK, bool doReset) {
   _serial = &stream;
-  
-  if (isACK) {
-    enableACK();
-  }
-  else{
-    disableACK();
-  }
-  
+
+  _sending[Stack::ACK] = requestACK;
+  //  if (isACK) {
+  //    enableACK();
+  //  }
+  //  else{
+  //    disableACK();
+  //  }
+
   if (doReset) {
     reset();
-    waitAvailable(2000);
+    waitAvailable(2000);  //manual says 3000
     delay(200);
   }
   else {
@@ -112,20 +108,20 @@ bool DFRobotDFPlayerMini::begin(Stream &stream, bool isACK, bool doReset){
     _handleType = Event::CardOnline;
   }
 
-  return (readType() == Event::CardOnline) || (readType() == Event::USBOnline) || !isACK;
+  return (readType() == Event::CardOnline) || (readType() == Event::USBOnline) || !requestACK;
 }
 
-Event DFRobotDFPlayerMini::readType(){
+Event DFRobotDFPlayerMini::readType() {
   _isAvailable = false;
   return _handleType;
 }
 
-uint16_t DFRobotDFPlayerMini::read(){
+uint16_t DFRobotDFPlayerMini::read() {
   _isAvailable = false;
   return _handleParameter;
 }
 
-bool DFRobotDFPlayerMini::handleMessage(Event type, uint16_t parameter){
+bool DFRobotDFPlayerMini::handleMessage(Event type, uint16_t parameter) {
   _receivedIndex = 0;
   _handleType = type;
   _handleParameter = parameter;
@@ -133,24 +129,24 @@ bool DFRobotDFPlayerMini::handleMessage(Event type, uint16_t parameter){
   return _isAvailable;
 }
 
-bool DFRobotDFPlayerMini::handleError(Event type, uint16_t parameter){
+bool DFRobotDFPlayerMini::handleError(Event type, uint16_t parameter) {
   handleMessage(type, parameter);
   _isSending = false;
   return false;
 }
 
-uint8_t DFRobotDFPlayerMini::readCommand(){
+uint8_t DFRobotDFPlayerMini::readCommand() {
   _isAvailable = false;
   return _handleCommand;
 }
 
-void DFRobotDFPlayerMini::parseStack(){
+void DFRobotDFPlayerMini::parseStack() {
   uint8_t handleCommand = _received[Stack::Command];
   if (handleCommand == 0x41) { //handle the 0x41 ack feedback as a special case, in case the corruption of _handleCommand, _handleParameter, and _handleType.
     _isSending = false;
     return;
   }
-  
+
   _handleCommand = handleCommand;
   _handleParameter =  arrayToUint16(&_received[Stack::Parameter]);
 
@@ -211,35 +207,28 @@ void DFRobotDFPlayerMini::parseStack(){
   }
 }
 
-uint16_t DFRobotDFPlayerMini::arrayToUint16(uint8_t *array){
-  uint16_t value = *array++;
-  value <<=8;
-  value |= *array;
-  return value;
-}
-
-bool DFRobotDFPlayerMini::validateStack(){
+bool DFRobotDFPlayerMini::validateStack() {
   return calculateCheckSum(_received) == arrayToUint16(&_received[Stack::CheckSum]);
 }
 
-bool DFRobotDFPlayerMini::available(){
+bool DFRobotDFPlayerMini::available() {
   while (_serial->available()) {
     YIELD;
     if (_receivedIndex == 0) {
       _received[Stack::Header] = _serial->read();
 #ifdef _DEBUG
       Serial.print(F("received:"));
-      Serial.print(_received[_receivedIndex],HEX);
+      Serial.print(_received[_receivedIndex], HEX);
       Serial.print(F(" "));
 #endif
       if (_received[Stack::Header] == 0x7E) {
         _receivedIndex ++;
       }
     }
-    else{
+    else {
       _received[_receivedIndex] = _serial->read();
 #ifdef _DEBUG
-      Serial.print(_received[_receivedIndex],HEX);
+      Serial.print(_received[_receivedIndex], HEX);
       Serial.print(F(" "));
 #endif
       switch (_receivedIndex) {
@@ -260,13 +249,13 @@ bool DFRobotDFPlayerMini::available(){
           if (_received[_receivedIndex] != 0xEF) {
             return handleError(WrongStack);
           }
-          else{
+          else {
             if (validateStack()) {
               _receivedIndex = 0;
               parseStack();
               return _isAvailable;
             }
-            else{
+            else {
               return handleError(WrongStack);
             }
           }
@@ -277,173 +266,176 @@ bool DFRobotDFPlayerMini::available(){
       _receivedIndex++;
     }
   }
-  
-  if (_isSending && (millis()-_timeOutTimer>=_timeOutDuration)) {
+
+  if (_isSending && (millis() - _timeOutTimer >= _timeOutDuration)) {
     return handleError(TimeOut);
   }
-  
+
   return _isAvailable;
 }
 
-void DFRobotDFPlayerMini::next(){
+void DFRobotDFPlayerMini::next() {
   sendStack(0x01);
 }
 
-void DFRobotDFPlayerMini::previous(){
+void DFRobotDFPlayerMini::previous() {
   sendStack(0x02);
 }
 
-void DFRobotDFPlayerMini::play(int fileNumber){
+void DFRobotDFPlayerMini::play(unsigned fileNumber) {
   sendStack(0x03, fileNumber);
 }
 
-void DFRobotDFPlayerMini::volumeUp(){
+void DFRobotDFPlayerMini::volumeUp() {
   sendStack(0x04);
 }
 
-void DFRobotDFPlayerMini::volumeDown(){
+void DFRobotDFPlayerMini::volumeDown() {
   sendStack(0x05);
 }
 
-void DFRobotDFPlayerMini::volume(uint8_t volume){
+void DFRobotDFPlayerMini::volume(uint8_t volume) {
   sendStack(0x06, volume);
 }
 
-void DFRobotDFPlayerMini::EQ(uint8_t eq) {
+void DFRobotDFPlayerMini::EQ(DFPLAYER_EQ eq) {
   sendStack(0x07, eq);
 }
 
-void DFRobotDFPlayerMini::loop(int fileNumber) {
-  sendStack(0x08, fileNumber);
+void DFRobotDFPlayerMini::loop(LoopMode play) {
+  sendStack(0x08, play);
 }
 
-void DFRobotDFPlayerMini::outputDevice(uint8_t device) {
-  sendStack(0x09, device);
-  delay(200);
+void DFRobotDFPlayerMini::outputDevice(DFPLAYER_DEVICE device) {
+  if (this->device != device) {
+    this->device = device;
+    sendStack(0x09, device);
+    delay(200);
+  }
 }
 
-void DFRobotDFPlayerMini::sleep(){
+void DFRobotDFPlayerMini::sleep() {
   sendStack(0x0A);
 }
 
-void DFRobotDFPlayerMini::reset(){
+void DFRobotDFPlayerMini::reset() {
   sendStack(0x0C);
 }
 
-void DFRobotDFPlayerMini::start(){
+void DFRobotDFPlayerMini::start() {
   sendStack(0x0D);
 }
 
-void DFRobotDFPlayerMini::pause(){
+void DFRobotDFPlayerMini::pause() {
   sendStack(0x0E);
 }
 
-void DFRobotDFPlayerMini::playFolder(uint8_t folderNumber, uint8_t fileNumber){
+void DFRobotDFPlayerMini::playFolder(uint8_t folderNumber, uint8_t fileNumber) {
   sendStack(0x0F, folderNumber, fileNumber);
 }
 
-void DFRobotDFPlayerMini::outputSetting(bool enable, uint8_t gain){
+void DFRobotDFPlayerMini::outputSetting(bool enable, uint8_t gain) {
   sendStack(0x10, enable, gain);
 }
 
-void DFRobotDFPlayerMini::enableLoopAll(){
+void DFRobotDFPlayerMini::enableLoopAll() {
   sendStack(0x11, 0x01);
 }
 
-void DFRobotDFPlayerMini::disableLoopAll(){
+void DFRobotDFPlayerMini::disableLoopAll() {
   sendStack(0x11, 0x00);
 }
 
-void DFRobotDFPlayerMini::playMp3Folder(int fileNumber){
+void DFRobotDFPlayerMini::playMp3Folder(unsigned fileNumber) {
   sendStack(0x12, fileNumber);
 }
 
-void DFRobotDFPlayerMini::advertise(int fileNumber){
+void DFRobotDFPlayerMini::advertise(unsigned fileNumber) {
   sendStack(0x13, fileNumber);
 }
 
-void DFRobotDFPlayerMini::playLargeFolder(uint8_t folderNumber, uint16_t fileNumber){
+void DFRobotDFPlayerMini::playLargeFolder(uint8_t folderNumber, uint16_t fileNumber) {
   sendStack(0x14, (((uint16_t)folderNumber) << 12) | fileNumber);
 }
 
-void DFRobotDFPlayerMini::stopAdvertise(){
+void DFRobotDFPlayerMini::stopAdvertise() {
   sendStack(0x15);
 }
 
-void DFRobotDFPlayerMini::stop(){
+void DFRobotDFPlayerMini::stop() {
   sendStack(0x16);
 }
 
-void DFRobotDFPlayerMini::loopFolder(int folderNumber){
+void DFRobotDFPlayerMini::loopFolder(unsigned folderNumber) {
   sendStack(0x17, folderNumber);
 }
 
-void DFRobotDFPlayerMini::randomAll(){
+void DFRobotDFPlayerMini::randomAll() {
   sendStack(0x18);
 }
 
-void DFRobotDFPlayerMini::enableLoop(){
+void DFRobotDFPlayerMini::enableLoop() {
   sendStack(0x19, 0x00);
 }
 
-void DFRobotDFPlayerMini::disableLoop(){
+void DFRobotDFPlayerMini::disableLoop() {
   sendStack(0x19, 0x01);
 }
 
-void DFRobotDFPlayerMini::enableDAC(){
+void DFRobotDFPlayerMini::enableDAC() {
   sendStack(0x1A, 0x00);
 }
 
-void DFRobotDFPlayerMini::disableDAC(){
+void DFRobotDFPlayerMini::disableDAC() {
   sendStack(0x1A, 0x01);
 }
 
-int DFRobotDFPlayerMini::readState(){
+int DFRobotDFPlayerMini::readState() {
   sendStack(0x42);
   if (waitAvailable()) {
     if (readType() == Event::FeedBack) {
       return read();
     }
-    else{
+    else {
       return -1;
     }
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readVolume(){
+int DFRobotDFPlayerMini::readVolume() {
   sendStack(0x43);
   if (waitAvailable()) {
     return read();
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readEQ(){
+int DFRobotDFPlayerMini::readEQ() {
   sendStack(0x44);
   if (waitAvailable()) {
     if (readType() == Event::FeedBack) {
       return read();
     }
-    else{
+    else {
       return -1;
     }
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readFileCounts(uint8_t device){
+int DFRobotDFPlayerMini::readFileCounts(DFPLAYER_DEVICE device) {
   switch (device) {
     case DFPLAYER_DEVICE::U_DISK:
       sendStack(0x47);
       break;
-    case DFPLAYER_DEVICE::SD:
+    case DFPLAYER_DEVICE::SDcard:
       sendStack(0x48);
       break;
     case DFPLAYER_DEVICE::FLASH:
@@ -452,26 +444,29 @@ int DFRobotDFPlayerMini::readFileCounts(uint8_t device){
     default:
       break;
   }
-  
+
   if (waitAvailable()) {
     if (readType() == Event::FeedBack) {
       return read();
     }
-    else{
+    else {
       return -1;
     }
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readCurrentFileNumber(uint8_t device){
+int DFRobotDFPlayerMini::readCurrentFileNumber(DFPLAYER_DEVICE device) {
+  if (device == PriorChoice) {
+    device = this->device;
+  }
   switch (device) {
     case DFPLAYER_DEVICE::U_DISK:
       sendStack(0x4B);
       break;
-    case DFPLAYER_DEVICE::SD:
+    case DFPLAYER_DEVICE::SDcard:
       sendStack(0x4C);
       break;
     case DFPLAYER_DEVICE::FLASH:
@@ -484,49 +479,49 @@ int DFRobotDFPlayerMini::readCurrentFileNumber(uint8_t device){
     if (readType() == Event::FeedBack) {
       return read();
     }
-    else{
+    else {
       return -1;
     }
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readFileCountsInFolder(int folderNumber){
+int DFRobotDFPlayerMini::readFileCountsInFolder(unsigned folderNumber) {
   sendStack(0x4E, folderNumber);
   if (waitAvailable()) {
     if (readType() == Event::FeedBack) {
       return read();
     }
-    else{
+    else {
       return -1;
     }
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readFolderCounts(){
+int DFRobotDFPlayerMini::readFolderCounts() {
   sendStack(0x4F);
   if (waitAvailable()) {
     if (readType() == Event::FeedBack) {
       return read();
     }
-    else{
+    else {
       return -1;
     }
   }
-  else{
+  else {
     return -1;
   }
 }
 
-int DFRobotDFPlayerMini::readFileCounts(){
-  return readFileCounts(DFPLAYER_DEVICE::SD);
+int DFRobotDFPlayerMini::readFileCounts() {
+  return readFileCounts(device);
 }
 
-int DFRobotDFPlayerMini::readCurrentFileNumber(){
-  return readCurrentFileNumber(DFPLAYER_DEVICE::SD);
+int DFRobotDFPlayerMini::readCurrentFileNumber() {
+  return readCurrentFileNumber(device);
 }

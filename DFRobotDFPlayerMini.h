@@ -1,3 +1,6 @@
+#ifndef DFRobotDFPlayerMini_cpp
+#define DFRobotDFPlayerMini_cpp
+
 /*!
    @file DFRobotDFPlayerMini.h
    @brief DFPlayer - An Arduino Mini MP3 Player From DFRobot
@@ -20,10 +23,7 @@
 
 */
 
-#include "Arduino.h"
-
-#ifndef DFRobotDFPlayerMini_cpp
-#define DFRobotDFPlayerMini_cpp
+#include "Arduino.h"  //helps some IDE's
 
 
 enum DFPLAYER_EQ : uint8_t {
@@ -31,12 +31,26 @@ enum DFPLAYER_EQ : uint8_t {
   POP, ROCK, JAZZ, CLASSIC, BASS
 };
 
-enum DFPLAYER_DEVICE : uint8_t {
-  U_DISK = 1,
-  SD, AUX, SLEEP, FLASH
+
+/** parameter for command 08 */
+enum LoopMode {
+  Repeat = 0,
+  FolderRepeat,
+  SingleRepeat,
+  Random
 };
 
-//#define _DEBUG
+/** parameter for command 09 */
+enum DFPLAYER_DEVICE : uint8_t {
+	PriorChoice=255,
+	U_DISK = 0,
+  SDcard,  //SD symbol is taken by Arduino.h, caused weird coloring in arduino IDE
+  AUX,
+  SLEEP,
+  FLASH,
+  
+  
+};
 
 enum Event : uint8_t {
   TimeOut = 0, WrongStack, CardInserted, CardRemoved , CardOnline , PlayFinished, Error, USBInserted , USBRemoved, USBOnline, CardUSBOnline, FeedBack
@@ -58,6 +72,7 @@ enum Stack {
 using Tick = decltype(millis());
 
 class DFRobotDFPlayerMini {
+  protected://changed access mode as will be extending in order to make it fully event driven without ripping out polled mode.
     Stream* _serial;
 
     Tick _timeOutTimer;
@@ -75,20 +90,28 @@ class DFRobotDFPlayerMini {
     void sendStack(uint8_t command, uint8_t argumentHigh, uint8_t argumentLow) {
       sendStack(command, argumentHigh << 8 | argumentLow); //gcc knows how to inline this code, saving bytes
     }
-
+    /** ACK means 'please send response to all commands, not just data queries' */
     void enableACK();
     void disableACK();
 
-    void uint16ToArray(uint16_t value, uint8_t *array);
+    /** bigendian value to message, moved here because compiler can efficiently inline it.*/
+    void uint16ToArray(uint16_t value, uint8_t *array) {
+      *array++ = (uint8_t)(value >> 8);
+      *array = (uint8_t)(value);
+    }
 
-    uint16_t arrayToUint16(uint8_t *array);
+    /** receive bigendian value, moved here because compiler can efficiently inline it.*/
+    uint16_t arrayToUint16(uint8_t *array) {
+      uint16_t value = *array++;//# if you eliminate this variable you are giving the compiler permission to swap bytes as it sees fit :)
+      return value << 8 | *array;
+    }
 
     uint16_t calculateCheckSum(uint8_t *buffer);
 
     void parseStack();
     bool validateStack();
 
-    uint8_t device = DFPLAYER_DEVICE::SD;
+    DFPLAYER_DEVICE device = DFPLAYER_DEVICE::PriorChoice;//guaranteed to cause a message to be sent to host when a device is actively chosen. 
 
   public:
 
@@ -105,8 +128,8 @@ class DFRobotDFPlayerMini {
     bool handleError(Event type, uint16_t parameter = 0);
 
     uint8_t readCommand();
-    /** setup call */
-    bool begin(Stream& stream, bool isACK = true, bool doReset = true);
+    /** setup call. @param requestACK is whether you desire to get acknowledgement messages for your commands. @param doReset blocks for enough time for device to do its scan of the storage media. */
+    bool begin(Stream& stream, bool requestACK = true, bool doReset = true);
 
     bool waitAvailable(unsigned long duration = 0);
 
@@ -122,7 +145,7 @@ class DFRobotDFPlayerMini {
 
     void previous();
 
-    void play(int fileNumber = 1);
+    void play(unsigned filenumber = 1);
 
     void volumeUp();
 
@@ -130,11 +153,11 @@ class DFRobotDFPlayerMini {
 
     void volume(uint8_t volume);
 
-    void EQ(uint8_t eq);
+    void EQ(DFPLAYER_EQ eq);
 
-    void loop(int fileNumber);
+    void loop(LoopMode play);
 
-    void outputDevice(uint8_t device);
+    void outputDevice(DFPLAYER_DEVICE device);
 
     void sleep();
 
@@ -152,9 +175,9 @@ class DFRobotDFPlayerMini {
 
     void disableLoopAll();
 
-    void playMp3Folder(int fileNumber);
+    void playMp3Folder(unsigned fileNumber);
 
-    void advertise(int fileNumber);
+    void advertise(unsigned fileNumber);
 
     void playLargeFolder(uint8_t folderNumber, uint16_t fileNumber);
 
@@ -162,7 +185,7 @@ class DFRobotDFPlayerMini {
 
     void stop();
 
-    void loopFolder(int folderNumber);
+    void loopFolder(unsigned folderNumber);
 
     void randomAll();
 
@@ -180,11 +203,11 @@ class DFRobotDFPlayerMini {
 
     int readEQ();
 
-    int readFileCounts(uint8_t device);
+    int readFileCounts(DFPLAYER_DEVICE device);
 
-    int readCurrentFileNumber(uint8_t device);
+    int readCurrentFileNumber(DFPLAYER_DEVICE device);
 
-    int readFileCountsInFolder(int folderNumber);
+    int readFileCountsInFolder(unsigned folderNumber);
 
     int readFileCounts();
 
