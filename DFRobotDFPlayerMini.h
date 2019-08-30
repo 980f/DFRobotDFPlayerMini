@@ -129,6 +129,10 @@ class DFRobotDFPlayerMini {
     /** setup call. @param requestACK is whether you desire to get acknowledgement messages for your commands. @param doReset blocks for enough time for device to do its scan of the storage media. */
     bool begin(Stream& stream, bool requestACK = true, bool doReset = true);
 
+  /** ACK means 'please send response to all commands, not just data queries' */
+    bool ACK(bool on);
+
+
     bool waitAvailable(unsigned long duration = 0);
 
     bool available();

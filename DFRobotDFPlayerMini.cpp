@@ -122,6 +122,12 @@ bool DFRobotDFPlayerMini::waitAvailable(Tick duration) {
   return true;
 }
 
+bool DFRobotDFPlayerMini::ACK(bool on){
+	bool was=_sending[Stack::ACK];
+	_sending[Stack::ACK]=on;
+	return was;
+}
+
 bool DFRobotDFPlayerMini::begin(Stream &stream, bool requestACK, bool doReset) {
   _serial = &stream;
 
